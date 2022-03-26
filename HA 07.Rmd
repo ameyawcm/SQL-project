@@ -1,0 +1,199 @@
+---
+title: "HA 7"
+author: "Ameyaw Ahmed Sadat"
+date: "12/24/2021"
+output: html_document
+---
+
+# Load libraries and data
+
+```{r libs, warning=FALSE, message=FALSE}
+library(openxlsx)
+library(lmtest) # grangertest, dwtest
+library(forecast) # Acf
+library(DescTools) # RMSE
+```
+
+```{r myFunction, include=F}
+myTests <- function(mymodel, bpStud=F, bgLags = 1){
+    
+    print("***** MODEL DIAGNOSTIC TESTS *****")
+    print(shapiro.test(mymodel$residuals))
+    print(bptest(mymodel, studentize = bpStud))
+    print(bgtest(mymodel, order = bgLags))
+    print(resettest(mymodel))
+    print("**************************")
+}
+```
+
+
+
+```{r data Import data}
+purchp <- read.xlsx("Sweden_USA.xlsx", sheet="data")
+
+exch <- ts(data=purchp$exch, start = c(1973, 11), frequency = 12)
+swecpi <- ts(data=purchp$swecpi, start = c(1973, 11), frequency = 12)
+usacpi<-ts(data = purchp$usacpi, start = c(1973, 11), frequency = 12)
+sweinfl<-ts(data = purchp$sweinfl, start = c(1973, 11), frequency =12 )
+```
+
+#Question 1
+```{r}
+# generate logarithms of exch
+logexch <- log(exch)
+```
+
+```{r difference of logarithm of exch}
+dlogexch <- diff(logexch)
+```
+
+```{r plots graph of exch}
+plot.ts(logexch, lwd=3, col="blue",  ylab="nominal exchange rate (SEK)", xlab=""); grid()
+```
+
+```{r stationarity of logexch check}
+Acf(logexch, lag.max = 12,wd=3, main="ACF of logexch")
+```
+
+```{r}
+plot.ts(logexch, main="Plot of DREG"); grid()
+```
+
+
+```{r max value of logexch check}
+summary(logexch)
+```
+
+
+```{r}
+shapiro.test(dlogexch)
+```
+
+
+
+
+###############################################
+
+#Question 2
+```{r}
+# generate logarithms of exch
+logswecpi<- log(swecpi)
+logusacpi<- log(usacpi)
+```
+
+
+
+```{r differences of log swecpi and usacpi}
+dlogswecpi <- diff(logswecpi)
+dlogusacpi <- diff(logusacpi)
+```
+
+```{r stationary test of logswecpi}
+Acf(logswecpi, lag.max = 12, lwd=3, main="ACF of logswecpi")
+```
+
+```{r}
+shapiro.test(logswecpi)
+```
+
+
+```{r}
+Acf(dlogusacpi, lag.max = 12, lwd=3, main="ACF of dlogusacpi")
+```
+
+
+```{r plots graph of exch}
+plot.ts(logusacpi, lwd=3, col="blue",  ylab="Cpi of USA (100)", xlab=""); grid()
+```
+
+```{r}
+Acf(logusacpi, lag.max = 12, lwd=3, main="ACF of tsdlogusacpi")
+```
+
+```{r plots graph of dlogswecpi}
+plot.ts(logswecpi, lwd=3, col="blue",  ylab="Cpi of swepci diff (100)", xlab=""); grid()
+```
+
+```{r}
+shapiro.test(dlogusacpi)
+```
+
+#######################################
+
+#Question 3
+
+```{r}
+pppmod1 <- (logexch+logusacpi-logswecpi)
+pppmod1ts <- ts(data=pppmod1,start = c(1973, 11), frequency = 12)
+```
+
+# stationarity check 
+```{r plots graph of ppp effect}
+plot.ts(pppmod1ts, lwd=3, col="blue",  ylab="ppp effect", xlab=""); grid()
+```
+
+```{r stationarity test for ppp effect}
+Acf(pppmod1ts, lag.max=12, lwd=3, main="ACF of PPP"); grid()
+```
+
+
+#############
+
+#Question 4
+
+```{r plots graph of exch}
+plot.ts(sweinfl, lwd=3, col="blue",  ylab="sweinfl (%)", xlab=""); grid()
+```
+
+```{r}
+Acf(exch, lag.max = 12, lwd=3, main="ACF of tsdlogusacpi")
+```
+
+```{r}
+summary(exch)
+```
+
+
+```{r}
+cor.test(exch, sweinfl)
+```
+
+```{r plots graph of exch}
+plot.ts(exch, lwd=3, col="blue",  ylab="exch (%)", xlab=""); grid()
+```
+
+```{r}
+summary(sweinfl)
+```
+
+```{r}
+# compare medians and means
+t.test(sweinfl, alternative="two.sided",mu=1, var.equal=F)
+```
+
+```{r}
+Acf(sweinfl, lag.max = 12, lwd=3, main="ACF of tsdlogusacpi")
+```
+
+```{r}
+Acf(exch, lag.max = 12, lwd=3, main="ACF of tsdlogusacpi")
+```
+
+########################
+#Question 5
+
+```{r}
+sweinflwin <- window(sweinfl, start= c(1973, 12))
+```
+
+
+
+```{r}
+# run a Granger causality test for DORG
+grangertest(sweinflwin ~ dlogexch, order = 1)
+```
+
+```{r}
+# run a Granger causality test for DORG
+grangertest(dlogexch ~ sweinflwin, order = 6)
+```
